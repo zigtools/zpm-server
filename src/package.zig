@@ -26,6 +26,73 @@ pub const PackageList = struct {
     /// reference to allocator, used for parsing packages and freeing its memory
     gpa: *Allocator,
 
+    const FilteredList = struct {
+        /// all packages, reorderd based on filter calls
+        all: []PackageDescription,
+        /// slice of .all based on given filter
+        filtered: []const PackageDescription,
+
+        /// Filters the `filtered` list by the given query
+        pub fn filter(self: *FilteredList, field: []const u8, value: anytype) void {
+            var index: usize = 0;
+            for (self.filtered) |pkg, i| {
+                if (!valid(pkg, field, value)) continue;
+
+                // No need to swap if already at correct index
+                if (index == i) {
+                    index += 1;
+                    continue;
+                }
+
+                const temp = self.all[index];
+                self.all[self.all.len - 1] = temp;
+                self.all[index] = pkg;
+                index += 1;
+            }
+
+            self.filtered = self.all[0..index];
+        }
+
+        /// Resets the filter so result() will contain all packages
+        pub fn resetFilter(self: *FilteredList) void {
+            self.filtered = self.all[0..self.all.len];
+        }
+
+        /// Returns a new `FilteredList`
+        fn init(list: []PackageDescription) FilteredList {
+            return .{
+                .all = list,
+                .filtered = list,
+            };
+        }
+
+        /// Checks if the given package complies with the given query
+        fn valid(pkg: PackageDescription, field: []const u8, value: []const u8) bool {
+            inline for (@typeInfo(PackageDescription).Struct.fields) |pkg_field| {
+                if (std.ascii.eqlIgnoreCase(pkg_field.name, field)) {
+                    if (@TypeOf(@field(pkg, pkg_field.name)) == []const u8) {
+                        if (std.ascii.eqlIgnoreCase(@field(pkg, pkg_field.name), value))
+                            return true;
+                    }
+
+                    if (@TypeOf(@field(pkg, pkg_field.name)) == [][]const u8) {
+                        for (@field(pkg, pkg_field.name)) |tag| {
+                            if (std.ascii.eqlIgnoreCase(tag, value)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// Returns the filtered list
+        pub fn result(self: FilteredList) []const PackageDescription {
+            return self.filtered;
+        }
+    };
+
     pub fn init(allocator: *Allocator) PackageList {
         return .{
             .internal = std.ArrayList(PackageDescription).init(allocator),
@@ -35,30 +102,8 @@ pub const PackageList = struct {
 
     /// Returns a list of packages based on the provided filter
     /// Caller owns memory
-    pub fn filter(self: PackageList, comptime field_name: []const u8, value: []const u8) ![]PackageDescription {
-        var list = std.ArrayList(PackageDescription).init(self.gpa);
-        defer list.deinit();
-
-        for (self.internal.items) |pkg| {
-            if (!@hasField(PackageDescription, field_name)) continue;
-
-            if (@TypeOf(@field(pkg, field_name)) == []const u8) {
-                if (std.ascii.eqlIgnoreCase(@field(pkg, field_name), value))
-                    try list.append(pkg);
-                continue;
-            }
-
-            if (@TypeOf(@field(pkg, field_name)) == [][]const u8) {
-                for (@field(pkg, field_name)) |tag| {
-                    if (std.ascii.eqlIgnoreCase(tag, value)) {
-                        try list.append(pkg);
-                        continue;
-                    }
-                }
-            }
-        }
-
-        return list.toOwnedSlice();
+    pub fn filter(self: PackageList) FilteredList {
+        return FilteredList.init(self.internal.items[0..]);
     }
 
     /// Creates a new PackageList from a stream that contains the raw data
@@ -81,22 +126,47 @@ test "Filter packages" {
         \\      "description": "Wraps SDL2 into a nice and cozy zig-style API."
         \\  }
     ;
+    const test_package2 =
+        \\  {
+        \\      "author": "foo",
+        \\      "root_file": "src/bar.zig",
+        \\      "tags": ["game"],
+        \\      "git": "https://github.com/foo/bar.zig",
+        \\      "name": "foobar",
+        \\      "description": "Foo bar is best bar"
+        \\  }
+    ;
 
     const gpa = std.testing.allocator;
 
     var opts = std.json.ParseOptions{ .allocator = gpa, .duplicate_field_behavior = .Error };
     var stream = std.json.TokenStream.init(test_package);
+    var stream2 = std.json.TokenStream.init(test_package2);
 
     const pkg = try std.json.parse(PackageDescription, &stream, opts);
     defer std.json.parseFree(PackageDescription, pkg, opts);
 
+    const pkg2 = try std.json.parse(PackageDescription, &stream2, opts);
+    defer std.json.parseFree(PackageDescription, pkg2, opts);
+
     var list = PackageList.init(gpa);
     defer list.deinit();
     try list.internal.append(pkg);
+    try list.internal.append(pkg2);
 
-    const filtered_list = try list.filter("author", "xq");
-    defer gpa.free(filtered_list);
+    var filtered_list = list.filter();
+    filtered_list.filter("author", "foo");
 
-    std.testing.expectEqual(@as(usize, 1), filtered_list.len);
-    std.testing.expectEqualStrings(pkg.description, filtered_list[0].description);
+    std.testing.expectEqual(@as(usize, 1), filtered_list.filtered.len);
+    std.testing.expectEqualStrings(pkg2.description, filtered_list.filtered[0].description);
+
+    filtered_list.resetFilter();
+    std.testing.expectEqual(@as(usize, 2), filtered_list.filtered.len);
+
+    filtered_list.filter("tags", "game");
+    std.testing.expectEqual(@as(usize, 2), filtered_list.result().len);
+
+    filtered_list.filter("name", "SDL2");
+    std.testing.expectEqual(@as(usize, 1), filtered_list.result().len);
+    std.testing.expectEqualStrings(pkg.name, filtered_list.result()[0].name);
 }
