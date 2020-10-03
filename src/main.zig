@@ -35,7 +35,6 @@ fn api(res: *http.Response, req: http.Request) !void {
 
 /// Writes the packages as json to the given writer stream
 fn writeAsJson(packages: []const pkg.PackageDescription, writer: anytype) @TypeOf(writer).Error!void {
-    std.debug.print("Len: {}\n", .{packages.len});
     var json = std.json.writeStream(writer, 22);
     try json.beginArray();
     for (packages) |item| {
