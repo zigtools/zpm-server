@@ -6,6 +6,8 @@ const Allocator = std.mem.Allocator;
 pub const PackageDescription = struct {
     /// Author of the package
     author: []const u8,
+    /// Name of the package
+    name: []const u8,
     /// Package can have multiple tags to categorize it
     tags: [][]const u8,
     /// The git url, this can be any url that points towards a git repository
@@ -75,6 +77,7 @@ test "Filter packages" {
         \\      "root_file": "src/root.zig",
         \\      "tags": [ "sdl", "sdl2", "game", "graphics" ],
         \\      "git": "https://github.com/MasterQ32/SDL.zig",
+        \\      "name": "SDL2",
         \\      "description": "Wraps SDL2 into a nice and cozy zig-style API."
         \\  }
     ;
