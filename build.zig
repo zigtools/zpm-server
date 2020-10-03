@@ -11,7 +11,11 @@ pub fn build(b: *Builder) void {
         .dependencies = &[_]std.build.Pkg{},
     };
 
+    const packages_dir = b.option([]const u8, "packages-dir", "Directory where all package json files are stored") orelse
+        "test";
+
     const exe = b.addExecutable("zpm-server", "src/main.zig");
+    exe.addBuildOption([]const u8, "packages_dir", packages_dir);
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.addPackage(http);

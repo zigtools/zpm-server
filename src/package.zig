@@ -7,7 +7,7 @@ pub const PackageDescription = struct {
     /// Author of the package
     author: []const u8,
     /// Name of the package
-    name: []const u8,
+    name: []const u8 = "",
     /// Package can have multiple tags to categorize it
     tags: [][]const u8,
     /// The git url, this can be any url that points towards a git repository
@@ -45,7 +45,7 @@ pub const PackageList = struct {
                 }
 
                 const temp = self.all[index];
-                self.all[self.all.len - 1] = temp;
+                self.all[i] = temp;
                 self.all[index] = pkg;
                 index += 1;
             }
@@ -106,10 +106,12 @@ pub const PackageList = struct {
         return FilteredList.init(self.internal.items[0..]);
     }
 
-    /// Creates a new PackageList from a stream that contains the raw data
-    /// The content must be json and correct.
-    pub fn fromStream(allocator: *Allocator, reader: anytype) !PackageList {}
+    /// Returns an unmutable slice of `PackageDescription`
+    pub fn items(self: PackageList) []const PackageDescription {
+        return self.internal.items;
+    }
 
+    /// Frees the internal packages array list
     pub fn deinit(self: PackageList) void {
         self.internal.deinit();
     }
