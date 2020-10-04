@@ -15,7 +15,7 @@ pub fn main() !void {
 
     try http.server.listenAndServe(
         &gpa.allocator,
-        try std.net.Address.parseIp("127.0.0.1", 8080),
+        try std.net.Address.parseIp("0.0.0.0", 8080),
         api,
     );
 }
