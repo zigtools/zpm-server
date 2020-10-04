@@ -8,7 +8,7 @@ RUN apt-get update && apt-get -y install cron git curl xz-utils
 RUN git clone https://github.com/ziglibs/repository /repository
 
 # pull every 15 minutes
-RUN echo */15 * * * * cd /repository && git pull >> /var/log/cron.log 2>&1'  > /etc/cron.d/update-repository
+RUN echo '*/15 * * * * cd /repository && git pull >> /var/log/cron.log 2>&1'  > /etc/cron.d/update-repository
 
 # Give execution rights on the cron job
 RUN chmod 0644 /etc/cron.d/update-repository
