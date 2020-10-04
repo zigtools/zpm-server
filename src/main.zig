@@ -1,17 +1,17 @@
 const std = @import("std");
 const http = @import("http");
 const pkg = @import("package.zig");
-const loader = @import("repo.zig");
+const cache = @import("cache.zig");
 
 pub const io_mode = .evented;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-var repo: loader = undefined;
+var package_cache: cache = undefined;
 
 pub fn main() !void {
     defer _ = gpa.deinit();
 
-    repo = try loader.init(&gpa.allocator);
-    defer repo.deinit();
+    package_cache = try cache.init(&gpa.allocator);
+    defer package_cache.deinit();
 
     try http.server.listenAndServe(
         &gpa.allocator,
@@ -25,12 +25,15 @@ fn api(res: *http.Response, req: http.Request) !void {
     try res.headers.put("Content-Type", "application/json");
 
     var query = try req.url.queryParameters(&gpa.allocator);
-    var filtered = repo.packages.filter();
+    var filtered = package_cache.packages.filter();
 
     var it = query.iterator();
     while (it.next()) |entry| filtered.filter(entry.key, entry.value);
 
     try writeAsJson(filtered.result(), res.writer());
+    // flush to ensure user recieves response before we potentially refresh cache
+    try res.flush();
+    try package_cache.updateCache();
 }
 
 /// Writes the packages as json to the given writer stream
