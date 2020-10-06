@@ -23,6 +23,7 @@ pub fn main() !void {
 /// Api handler
 fn api(res: *http.Response, req: http.Request) !void {
     try res.headers.put("Content-Type", "application/json");
+    try res.headers.put("Access-Control-Allow-Origin", "*");
 
     var query = try req.url.queryParameters(&gpa.allocator);
     var filtered = package_cache.packages.filter();
