@@ -18,6 +18,15 @@ pub const PackageDescription = struct {
     description: []const u8,
 };
 
+/// Contains the name and description of a Tag
+pub const Tag = struct {
+    name: []const u8 = "",
+    description: []const u8,
+};
+
+/// Dynamic list of Tags
+pub const TagList = std.ArrayList(Tag);
+
 /// Struct containing a list of all parsed packages,
 /// contains usefull functions to refresh or filter them.
 pub const PackageList = struct {
