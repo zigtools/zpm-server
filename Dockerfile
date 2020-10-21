@@ -27,7 +27,7 @@ RUN mv /zig/*/* /zig
 
 # Install the application
 COPY . /app
-RUN /zig/zig build -Dpackages-dir=/repository/packages -Drelease-safe 
+RUN /zig/zig build -Dpackages-dir=/repository/packages -Dtags-dir=/repository/tags -Drelease-safe 
 
 # Run the command on container startup
 # CMD cron && tail -f /var/log/cron.log
