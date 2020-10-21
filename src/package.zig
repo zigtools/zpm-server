@@ -31,7 +31,7 @@ pub const TagList = std.ArrayList(Tag);
 /// contains usefull functions to refresh or filter them.
 pub const PackageList = struct {
     /// internal list of all packages
-    internal: std.ArrayList(PackageDescription),
+    internal: std.ArrayListUnmanaged(PackageDescription),
     /// reference to allocator, used for parsing packages and freeing its memory
     gpa: *Allocator,
 
@@ -104,7 +104,7 @@ pub const PackageList = struct {
 
     pub fn init(allocator: *Allocator) PackageList {
         return .{
-            .internal = std.ArrayList(PackageDescription).init(allocator),
+            .internal = std.ArrayListUnmanaged(PackageDescription){},
             .gpa = allocator,
         };
     }
@@ -121,8 +121,8 @@ pub const PackageList = struct {
     }
 
     /// Frees the internal packages array list
-    pub fn deinit(self: PackageList) void {
-        self.internal.deinit();
+    pub fn deinit(self: *PackageList) void {
+        self.internal.deinit(self.gpa);
     }
 };
 
