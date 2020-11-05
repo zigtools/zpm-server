@@ -93,17 +93,26 @@ fn writeAsJson(comptime T: type, list: []const T, writer: anytype) @TypeOf(write
         inline for (@typeInfo(T).Struct.fields) |field| {
             try json.objectField(field.name);
 
-            if (@TypeOf(@field(item, field.name)) == []const u8) {
-                try json.emitString(@field(item, field.name));
+            const cur_field = @field(item, field.name);
+
+            if (@TypeOf(cur_field) == []const u8) {
+                try json.emitString(cur_field);
             }
 
-            if (@TypeOf(@field(item, field.name)) == [][]const u8) {
+            if (@TypeOf(cur_field) == [][]const u8) {
                 try json.beginArray();
-                for (@field(item, field.name)) |tag| {
+                for (cur_field) |tag| {
                     try json.arrayElem();
                     try json.emitString(tag);
                 }
                 try json.endArray();
+            }
+
+            if (@TypeOf(cur_field) == ?[]const u8) {
+                if (cur_field) |val|
+                    try json.emitString(val)
+                else
+                    try json.emitNull();
             }
         }
         try json.endObject();

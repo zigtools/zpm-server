@@ -13,7 +13,8 @@ pub const PackageDescription = struct {
     /// The git url, this can be any url that points towards a git repository
     git: []const u8,
     /// Path to the root file, which `build.zig` can use to add the package to itself
-    root_file: []const u8,
+    /// can be null if the root_file is generated
+    root_file: ?[]const u8,
     /// Package description
     description: []const u8,
 };
